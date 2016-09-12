@@ -26,7 +26,6 @@ import android.os.UserHandle;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.preference.PreferenceManager;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.cyanogenmod.updater.R;

@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Parcelable;
+import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
@@ -91,6 +92,7 @@ public class UpdatesSettings extends PreferenceActivity implements
 
     private SharedPreferences mPrefs;
     private ListPreference mUpdateCheck;
+    private ListPreference mUpdateType;
 
     private PreferenceCategory mUpdatesList;
     private UpdatePreference mDownloadingPreference;
@@ -153,6 +155,7 @@ public class UpdatesSettings extends PreferenceActivity implements
         }
         mUpdatesList = (PreferenceCategory) findPreference(UPDATES_CATEGORY);
         mUpdateCheck = (ListPreference) findPreference(Constants.UPDATE_CHECK_PREF);
+        mUpdateType = (ListPreference) findPreference(Constants.UPDATE_TYPE_PREF);
 
         // Load the stored preference data
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -163,12 +166,18 @@ public class UpdatesSettings extends PreferenceActivity implements
             mUpdateCheck.setOnPreferenceChangeListener(this);
         }
 
-        // Force a refresh if UPDATE_TYPE_PREF does not match release type
-        int updateType = Utils.getUpdateType();
-        int updateTypePref = mPrefs.getInt(Constants.UPDATE_TYPE_PREF,
-                Constants.UPDATE_TYPE_SNAPSHOT);
-        if (updateTypePref != updateType) {
-            updateUpdatesType(updateType);
+        if (mUpdateType != null) {
+            int type = mPrefs.getInt(Constants.UPDATE_TYPE_PREF, 0);
+            if (type >= mUpdateType.getEntries().length) {
+                // We previously removed an entry from this entries list,
+                // so if a user has the old index (3) selected still,
+                // an IndexOutOfBounds exception will be thrown.
+                // Let's reset them to a sane default.
+                type = 0;
+            }
+            mUpdateType.setValue(String.valueOf(type));
+            mUpdateType.setSummary(mUpdateType.getEntries()[type]);
+            mUpdateType.setOnPreferenceChangeListener(this);
         }
 
         // Set 'HomeAsUp' feature of the actionbar to fit better into Settings
@@ -271,6 +280,27 @@ public class UpdatesSettings extends PreferenceActivity implements
             mPrefs.edit().putInt(Constants.UPDATE_CHECK_PREF, value).apply();
             mUpdateCheck.setSummary(mapCheckValue(value));
             Utils.scheduleUpdateService(this, value * 1000);
+            return true;
+        } else if (preference == mUpdateType) {
+            final int value = Integer.valueOf((String) newValue);
+            if (value == Constants.UPDATE_TYPE_NEW_NIGHTLY
+                    || value == Constants.UPDATE_TYPE_ALL) {
+                new AlertDialog.Builder(this)
+                    .setTitle(R.string.nightly_alert_title)
+                    .setMessage(R.string.nightly_alert)
+                    .setPositiveButton(getString(R.string.dialog_ok),
+                            new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            updateUpdatesType(value);
+                            mUpdateType.setValueIndex(value);
+                        }
+                    })
+                    .setNegativeButton(R.string.dialog_cancel, null)
+                    .show();
+                return false;
+            } else {
+                updateUpdatesType(value);
+            }
             return true;
         }
 
@@ -450,6 +480,7 @@ public class UpdatesSettings extends PreferenceActivity implements
 
     private void updateUpdatesType(int type) {
         mPrefs.edit().putInt(Constants.UPDATE_TYPE_PREF, type).apply();
+        mUpdateType.setSummary(mUpdateType.getEntries()[type]);
         checkForUpdates();
     }
 
@@ -922,15 +953,8 @@ public class UpdatesSettings extends PreferenceActivity implements
         String date = DateFormat.getLongDateFormat(this).format(lastCheck);
         String time = DateFormat.getTimeFormat(this).format(lastCheck);
 
-        String cmReleaseType = Constants.CM_RELEASETYPE_NIGHTLY;
-        int updateType = Utils.getUpdateType();
-        if (updateType == Constants.UPDATE_TYPE_SNAPSHOT) {
-            cmReleaseType = Constants.CM_RELEASETYPE_SNAPSHOT;
-        }
-
         String message = getString(R.string.sysinfo_device) + " " + Utils.getDeviceType() + "\n\n"
                 + getString(R.string.sysinfo_running) + " " + Utils.getInstalledVersion() + "\n\n"
-                + getString(R.string.sysinfo_update_channel) + " " + cmReleaseType + "\n\n"
                 + getString(R.string.sysinfo_last_check) + " " + date + " " + time;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)

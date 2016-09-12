@@ -214,7 +214,8 @@ public class UpdateCheckService extends IntentService
 
     private void getAvailableUpdates() {
         // Get the type of update we should check for
-        int updateType = Utils.getUpdateType();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int updateType = prefs.getInt(Constants.UPDATE_TYPE_PREF, 0);
 
         // Get the actual ROM Update Server URL
         URI updateServerUri = getServerURI();
@@ -239,12 +240,16 @@ public class UpdateCheckService extends IntentService
         JSONArray channels = new JSONArray();
 
         switch(updateType) {
-            case Constants.UPDATE_TYPE_SNAPSHOT:
+            case Constants.UPDATE_TYPE_ALL:
                 channels.put("snapshot");
-                break;
-            case Constants.UPDATE_TYPE_NIGHTLY:
-            default:
                 channels.put("nightly");
+                break;
+            case Constants.UPDATE_TYPE_NEW_NIGHTLY:
+                channels.put("nightly");
+                break;
+            case Constants.UPDATE_TYPE_NEW_SNAPSHOT:
+            default:
+                channels.put("snapshot");
                 break;
         }
         JSONObject params = new JSONObject();
@@ -314,7 +319,8 @@ public class UpdateCheckService extends IntentService
 
     @Override
     public void onResponse(JSONObject jsonObject) {
-        int updateType = Utils.getUpdateType();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int updateType = prefs.getInt(Constants.UPDATE_TYPE_PREF, 0);
 
         LinkedList<UpdateInfo> lastUpdates = State.loadState(this);
         LinkedList<UpdateInfo> updates = parseJSON(jsonObject.toString(), updateType);
