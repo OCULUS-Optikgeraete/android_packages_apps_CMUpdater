@@ -244,10 +244,10 @@ public class UpdateCheckService extends IntentService
                 channels.put("snapshot");
                 channels.put("nightly");
                 break;
-            case Constants.UPDATE_TYPE_NEW_NIGHTLY:
+            case Constants.UPDATE_TYPE_NIGHTLY:
                 channels.put("nightly");
                 break;
-            case Constants.UPDATE_TYPE_NEW_SNAPSHOT:
+            case Constants.UPDATE_TYPE_SNAPSHOT:
             default:
                 channels.put("snapshot");
                 break;
